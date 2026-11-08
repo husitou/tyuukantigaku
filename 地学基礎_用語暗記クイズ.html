@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>地学基礎 用語暗記＆クイズマスター</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Noto Sans JP', 'Inter', sans-serif; background-color: #f1f5f9; }
+    .perspective-1000 { perspective: 1000px; }
+    .transform-style-3d { transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .rotate-y-180 { transform: rotateY(180deg); }
+    .flip-card-inner { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    .flip-card-inner.is-flipped { transform: rotateY(180deg); }
+    .back-masked #card-answer, .back-masked #card-alt-answers, .back-masked #card-status-indicator { visibility: hidden; }
+    .dropdown-menu { opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .dropdown-menu.is-active { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+    #category-dropdown-menu { max-height: 70vh; overflow-y: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .blank { display:inline-block; min-width:4.5em; border-bottom:3px solid #6366f1; color:#6366f1; text-align:center; font-weight:900; margin:0 2px; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+
+  <header class="bg-indigo-600 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center space-x-2">
+        <div class="bg-yellow-400 text-indigo-900 rounded-lg p-1.5 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-earth-asia text-lg"></i>
+        </div>
+        <h1 class="text-base md:text-xl font-black tracking-wide">地学基礎 用語マスター</h1>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="relative" id="dropdown-container">
+          <button id="dropdown-toggle-btn" onclick="toggleDropdown(event)"
+            class="bg-indigo-800/80 hover:bg-indigo-800 text-white text-xs md:text-sm font-bold py-2 px-4 rounded-full border border-indigo-400/40 shadow-sm flex items-center gap-2 transition active:scale-95 focus:outline-none">
+            <span id="selected-category-label"></span>
+            <i id="dropdown-arrow" class="fa-solid fa-chevron-down text-xs text-indigo-200 transition-transform duration-200"></i>
+          </button>
+          <div id="category-dropdown-menu"
+            class="dropdown-menu absolute right-0 mt-2 w-80 max-w-[90vw] bg-white text-slate-800 rounded-2xl shadow-xl border border-slate-200/80 p-2 z-50">
+            <div class="text-[10px] font-bold text-slate-400 px-3 py-1 tracking-wider uppercase">学習単元の選択</div>
+            <div id="category-options"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 text-xs md:text-sm bg-indigo-800/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-indigo-400/30">
+          <span id="mastered-count-badge" class="font-semibold text-emerald-300 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> 習得: 0</span>
+          <span class="text-indigo-400">|</span>
+          <span id="review-count-badge" class="font-semibold text-amber-300 flex items-center gap-1"><i class="fa-solid fa-rotate-right"></i> 復習: 0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-2 flex border-t border-indigo-500/40 text-xs md:text-sm font-medium overflow-x-auto">
+      <button id="tab-flashcard" onclick="switchMode('flashcard')" class="flex-1 min-w-[90px] py-2.5 text-center border-b-2 border-white font-bold transition-all flex items-center justify-center gap-1.5 text-white">
+        <i class="fa-solid fa-layer-group"></i> <span>暗記カード</span>
+      </button>
+      <button id="tab-typing" onclick="switchMode('typing')" class="flex-1 min-w-[90px] py-2.5 text-center border-b-2 border-transparent text-indigo-200 hover:text-white transition-all flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-keyboard"></i> <span>文字入力</span>
+      </button>
+      <button id="tab-quiz" onclick="switchMode('quiz')" class="flex-1 min-w-[90px] py-2.5 text-center border-b-2 border-transparent text-indigo-200 hover:text-white transition-all flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-list-check"></i> <span>8択テスト</span>
+      </button>
+      <button id="tab-test" onclick="switchMode('test')" class="flex-1 min-w-[130px] py-2.5 text-center border-b-2 border-transparent text-indigo-200 hover:text-white transition-all flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-clipboard-check"></i> <span>覚えてるかテスト</span>
+      </button>
+      <button id="tab-list" onclick="switchMode('list')" class="flex-1 min-w-[90px] py-2.5 text-center border-b-2 border-transparent text-indigo-200 hover:text-white transition-all flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-book-open"></i> <span>全問一覧</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto w-full px-4 py-6 flex-grow">
+
+    <!-- Flashcard -->
+    <section id="mode-flashcard" class="block">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6">
+        <div class="flex justify-between items-center mb-2 text-xs md:text-sm text-slate-600 font-medium">
+          <span id="card-progress-text" class="font-bold text-slate-700">問題 1 / 1</span>
+          <div class="flex gap-2">
+            <button onclick="toggleFilterReviewOnly()" id="btn-filter-review" class="px-3 py-1.5 text-xs rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 transition flex items-center gap-1">
+              <i class="fa-solid fa-filter text-amber-500"></i> <span>要復習のみ</span>
+            </button>
+            <button onclick="shuffleCards()" class="px-3 py-1.5 text-xs rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 transition flex items-center gap-1">
+              <i class="fa-solid fa-shuffle text-indigo-500"></i> <span>シャッフル</span>
+            </button>
+          </div>
+        </div>
+        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+          <div id="card-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+        </div>
+      </div>
+
+      <div class="perspective-1000 w-full h-80 md:h-96 cursor-pointer mb-6" onclick="flipCard()">
+        <div id="flashcard-inner" class="flip-card-inner relative w-full h-full transform-style-3d rounded-3xl shadow-md border border-slate-200/80">
+          <div class="absolute inset-0 bg-white rounded-3xl p-6 md:p-8 flex flex-col justify-between backface-hidden">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-400">
+              <span id="card-category-tag" class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100"></span>
+              <span><i class="fa-solid fa-hand-pointer text-indigo-400"></i> タップで答えを表示</span>
+            </div>
+            <div class="my-auto text-center">
+              <div id="card-question" class="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed"></div>
+            </div>
+            <div class="text-center text-xs text-slate-400 font-medium">Spaceキー または クリックで反転</div>
+          </div>
+
+          <div class="absolute inset-0 bg-slate-900 text-white rounded-3xl p-6 md:p-8 flex flex-col justify-between backface-hidden rotate-y-180 border-2 border-indigo-500">
+            <div class="flex justify-between items-center text-xs font-bold text-indigo-300">
+              <span class="bg-indigo-950 text-indigo-300 px-3 py-1 rounded-full border border-indigo-700"><i class="fa-solid fa-key"></i> 解答</span>
+              <span>タップで問題に戻る</span>
+            </div>
+            <div class="my-auto text-center">
+              <div id="card-answer" class="text-2xl md:text-3xl font-extrabold text-amber-300 tracking-wide mb-2"></div>
+              <div id="card-alt-answers" class="text-xs text-indigo-300 mt-2 font-normal hidden"></div>
+            </div>
+            <div id="card-status-indicator" class="text-center text-xs font-medium"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="markCurrentCard(false)" class="py-3.5 px-4 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-2xl font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-sm">
+          <i class="fa-solid fa-rotate-right text-amber-600"></i> もう一度復習
+        </button>
+        <button onclick="markCurrentCard(true)" class="py-3.5 px-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-2xl font-bold flex items-center justify-center gap-2 transition active:scale-95 shadow-sm">
+          <i class="fa-solid fa-check text-emerald-600"></i> 覚えた！
+        </button>
+      </div>
+
+      <div class="flex justify-between items-center gap-3">
+        <button onclick="prevCard()" class="flex-1 py-3 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-2 transition shadow-sm">
+          <i class="fa-solid fa-chevron-left"></i> 前の問題
+        </button>
+        <button onclick="nextCard()" class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition shadow-sm">
+          次の問題 <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- Typing -->
+    <section id="mode-typing" class="hidden">
+      <div id="typing-active-box">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6">
+          <div class="flex justify-between items-center mb-2 text-xs md:text-sm text-slate-600 font-medium">
+            <span id="typing-progress-text" class="font-bold text-slate-700">文字入力 1 / 1</span>
+            <span id="typing-score-text" class="text-indigo-600 font-bold">正解数: 0</span>
+          </div>
+          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+            <div id="typing-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-8 mb-6">
+          <div class="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-3">
+            <span id="typing-category-tag" class="bg-indigo-50 px-3 py-1 rounded-full"></span>
+          </div>
+          <h3 id="typing-question-text" class="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed mb-6"></h3>
+
+          <form onsubmit="handleTypingSubmit(event)" class="space-y-4">
+            <input type="text" id="typing-input" autocomplete="off" placeholder="答えを入力..."
+              class="w-full px-5 py-4 text-base md:text-lg rounded-2xl border-2 border-slate-300 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition focus:outline-none font-bold text-slate-800">
+            <div class="flex gap-3">
+              <button type="submit" id="btn-typing-submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2">
+                <span>回答する</span> <i class="fa-solid fa-paper-plane text-sm"></i>
+              </button>
+              <button type="button" id="btn-typing-next" onclick="nextTypingQuestion()" class="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2 hidden">
+                <span>次の問題へ</span> <i class="fa-solid fa-arrow-right text-sm"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div id="typing-feedback" class="hidden rounded-2xl p-6 transition-all mb-6">
+          <div id="typing-feedback-title" class="text-xl font-extrabold mb-2 flex items-center gap-2"></div>
+          <div id="typing-feedback-detail" class="text-sm md:text-base font-medium"></div>
+        </div>
+      </div>
+
+      <div id="typing-result-box" class="hidden bg-white rounded-3xl shadow-sm border border-slate-200/80 p-8 text-center">
+        <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-award"></i></div>
+        <h2 class="text-2xl font-bold text-slate-800 mb-2">入力テスト完了！</h2>
+        <div class="text-4xl md:text-5xl font-black text-indigo-600 mb-6" id="typing-final-score"></div>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <button id="btn-typing-retry-mistakes" onclick="startTypingTest(true)" class="py-3.5 px-6 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2 hidden">
+            <i class="fa-solid fa-rotate-right"></i> 間違えた問題だけやり直す
+          </button>
+          <button onclick="startTypingTest(false)" class="py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrows-rotate"></i> 最初からもう一度
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quiz -->
+    <section id="mode-quiz" class="hidden">
+      <div id="quiz-active-box">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6">
+          <div class="flex justify-between items-center mb-2 text-xs md:text-sm text-slate-600 font-medium">
+            <span id="quiz-progress-text" class="font-bold text-slate-700">8択テスト 1 / 1</span>
+            <span id="quiz-score-text" class="text-indigo-600 font-bold">正解数: 0</span>
+          </div>
+          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+            <div id="quiz-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-8 mb-6">
+          <div class="text-xs font-bold text-indigo-600 mb-2 flex items-center gap-1">
+            <span id="quiz-category-tag" class="bg-indigo-50 px-2.5 py-0.5 rounded-full"></span>
+          </div>
+          <h3 id="quiz-question-text" class="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed"></h3>
+        </div>
+
+        <div id="quiz-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6"></div>
+        <div id="quiz-feedback" class="hidden p-4 rounded-2xl mb-4 text-center font-bold transition"></div>
+
+        <button id="btn-quiz-next" onclick="nextQuizQuestion()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-base shadow-md transition hidden">
+          次の問題へ <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+
+      <div id="quiz-result-box" class="hidden bg-white rounded-3xl shadow-sm border border-slate-200/80 p-8 text-center">
+        <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-trophy"></i></div>
+        <h2 class="text-2xl font-bold text-slate-800 mb-2">8択テスト完了！</h2>
+        <div class="text-4xl md:text-5xl font-black text-indigo-600 mb-6" id="quiz-final-score"></div>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <button id="btn-quiz-retry-mistakes" onclick="startQuiz(true)" class="py-3.5 px-6 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2 hidden">
+            <i class="fa-solid fa-rotate-right"></i> 間違えた問題だけやり直す
+          </button>
+          <button onclick="startQuiz(false)" class="py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrows-rotate"></i> 最初から再チャレンジ
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Test (覚えてるかテスト) -->
+    <section id="mode-test" class="hidden">
+      <!-- スタート画面 -->
+      <div id="test-start-box" class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-8 text-center">
+        <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-clipboard-check"></i></div>
+        <h2 class="text-2xl font-bold text-slate-800 mb-2">覚えてるかテスト</h2>
+        <p class="text-sm md:text-base text-slate-600 font-medium mb-1">選んだ単元からランダムに<span class="font-black text-indigo-600">15問</span>出題します。</p>
+        <p class="text-xs md:text-sm text-slate-500 mb-5">答え合わせは最後にまとめて表示されます。</p>
+        <div id="test-start-info" class="inline-block bg-slate-100 text-slate-700 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-6"></div>
+        <div class="text-xs font-bold text-slate-400 mb-2 tracking-wider">出題形式</div>
+        <div class="flex gap-3 mb-6 max-w-md mx-auto">
+          <button id="test-fmt-typing" onclick="setTestFormat('typing')"><i class="fa-solid fa-keyboard"></i> 文字入力</button>
+          <button id="test-fmt-choice" onclick="setTestFormat('choice')"><i class="fa-solid fa-list-check"></i> 8択</button>
+        </div>
+        <button id="btn-test-start" onclick="startTest()" class="w-full max-w-md py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2 mx-auto">
+          <i class="fa-solid fa-play"></i> テスト開始
+        </button>
+      </div>
+
+      <!-- 出題画面 -->
+      <div id="test-active-box" class="hidden">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6">
+          <div class="flex justify-between items-center mb-2 text-xs md:text-sm text-slate-600 font-medium">
+            <span id="test-progress-text" class="font-bold text-slate-700">テスト 1 / 15</span>
+            <span class="text-slate-400 text-xs">答え合わせは最後に表示</span>
+          </div>
+          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+            <div id="test-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-8 mb-6">
+          <div class="text-xs font-bold text-indigo-600 mb-3">
+            <span id="test-category-tag" class="bg-indigo-50 px-3 py-1 rounded-full"></span>
+          </div>
+          <h3 id="test-question-text" class="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed"></h3>
+        </div>
+
+        <form id="test-typing-area" onsubmit="handleTestSubmit(event)" class="space-y-3">
+          <input type="text" id="test-input" autocomplete="off" placeholder="答えを入力..."
+            class="w-full px-5 py-4 text-base md:text-lg rounded-2xl border-2 border-slate-300 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition focus:outline-none font-bold text-slate-800">
+          <div class="flex gap-3">
+            <button type="button" onclick="testDontKnow()" class="flex-1 py-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 rounded-2xl font-bold shadow-sm transition">わからない</button>
+            <button type="submit" class="flex-[2] py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg shadow-md transition flex items-center justify-center gap-2">
+              <span>回答する</span> <i class="fa-solid fa-arrow-right text-sm"></i>
+            </button>
+          </div>
+        </form>
+
+        <div id="test-choice-area" class="hidden">
+          <div id="test-options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3"></div>
+          <button type="button" onclick="testDontKnow()" class="w-full py-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 rounded-2xl font-bold shadow-sm transition">わからない</button>
+        </div>
+      </div>
+
+      <!-- 結果画面 -->
+      <div id="test-result-box" class="hidden">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-8 text-center mb-6">
+          <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-trophy"></i></div>
+          <h2 class="text-2xl font-bold text-slate-800 mb-2">テスト結果</h2>
+          <div class="text-4xl md:text-5xl font-black text-indigo-600 mb-1" id="test-final-score"></div>
+          <div class="text-sm font-bold text-slate-500 mb-3" id="test-final-percent"></div>
+          <div class="text-base font-bold text-slate-700 mb-6" id="test-final-message"></div>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button id="btn-test-retry-mistakes" onclick="retryTestMistakes()" class="py-3.5 px-6 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2 hidden">
+              <i class="fa-solid fa-rotate-right"></i> 間違えた問題だけやり直す
+            </button>
+            <button onclick="startTest()" class="py-3.5 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition shadow-md flex items-center justify-center gap-2">
+              <i class="fa-solid fa-shuffle"></i> 新しい15問でテスト
+            </button>
+            <button onclick="showTestStart()" class="py-3.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-gear"></i> 設定に戻る
+            </button>
+          </div>
+        </div>
+        <div class="text-xs font-bold text-slate-400 px-1 mb-2 tracking-wider">答え合わせ</div>
+        <div id="test-review-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- List -->
+    <section id="mode-list" class="hidden">
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6 flex flex-col md:flex-row gap-3">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+          <input type="text" id="list-search-input" oninput="renderQuestionList()" placeholder="キーワードや問題文で検索..."
+            class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <button onclick="toggleAllAnswersInList()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs md:text-sm rounded-xl transition whitespace-nowrap flex items-center justify-center gap-2">
+          <i class="fa-solid fa-eye"></i> <span>答え全表示 / 隠す</span>
+        </button>
+      </div>
+      <div id="question-list-container" class="space-y-3"></div>
+    </section>
+
+  </main>
+
+  <script>
+    // [単元, 問題文, 正解, 別解[], 8択用のまぎらわしい選択肢[] (任意)]
+    const C1 = "地球の内部構造";
+    const C2 = "プレートと地殻変動";
+    const C3 = "地震";
+
+    const data = [
+      // ===== 地球の内部構造 =====
+      [C1, "モホロビチッチ不連続面より上の部分は何とよばれるか。", "地殻", ["ちかく"]],
+      [C1, "地殻より下にある深さ2900kmまでの部分は何とよばれるか。", "マントル", ["まんとる"]],
+      [C1, "深さ2900kmより深い地球の中心部は何とよばれるか。", "核", ["かく"]],
+      [C1, "海洋地殻はおもにどのような岩石でできているか。", "玄武岩質の岩石", ["玄武岩", "玄武岩質", "げんぶがんしつのがんせき", "げんぶがん"], ["花崗岩質の岩石", "安山岩質の岩石", "かんらん岩質の岩石"]],
+      [C1, "上部マントルはかんらん石と輝石を主とする岩石からなるが，その岩石は何とよばれるか。", "かんらん岩", ["橄欖岩", "ペリドタイト", "かんらんがん"], ["花崗岩", "玄武岩", "斑れい岩", "閃緑岩"]],
+      [C1, "上部マントルと下部マントルで，より高密度の結晶構造をもつ鉱物からなるのはどちらか。", "下部マントル", ["かぶまんとる"], ["上部マントル"]],
+      [C1, "核の大部分を構成している物質は何か。", "鉄", ["てつ", "Fe", "鉄とニッケル", "鉄・ニッケル"], ["ニッケル", "ケイ素", "酸素", "アルミニウム"]],
+      [C1, "核のうち，外核はどのような状態であると考えられているか。", "液体", ["えきたい", "液体状", "液状"], ["固体", "気体", "ガラス状"]],
+      [C1, "地球内部の高温でやわらかく流れやすい部分をアセノスフェアとよぶのに対し，温度がそれより低く硬い部分を何とよぶか。", "リソスフェア", ["りそすふぇあ"], ["アセノスフェア"]],
+
+      // ===== プレートと地殻変動 =====
+      [C2, "地球の表面をおおっている十数枚の硬い岩盤（その実体はリソスフェア）を何というか。", "プレート", ["ぷれーと"]],
+      [C2, "プレートがそれぞれ別の方向に移動することによって，さまざまな地殻変動が起こるという考え方を何というか。", "プレートテクトニクス", ["プレートテクトニクス説", "ぷれーとてくとにくす"]],
+      [C2, "プレート境界のうち，プレートが引っ張られてできた割れ目をマントルから上昇してきたマグマが満たし，プレートが生産されている海底の場所を何というか。", "中央海嶺", ["海嶺", "ちゅうおうかいれい"]],
+      [C2, "プレート境界において，大陸が分裂することによって形成する凹型の地形を何というか。", "地溝帯", ["大陸地溝帯", "大地溝帯", "リフト", "リフトバレー", "ちこうたい"]],
+      [C2, "中央海嶺周辺には，その中軸部を橋渡しするような形で横ずれ断層ができる。このような断層を何というか。", "トランスフォーム断層", ["トランスフォーム", "とらんすふぉーむだんそう"]],
+      [C2, "重い海洋プレートが，大陸プレートの下に沈みこむプレート境界にできる深い溝を何というか。", "海溝", ["かいこう"], ["トラフ", "地溝帯", "中央海嶺"]],
+      [C2, "日本列島のように，海溝にそって弧状にできる島を何というか。", "島弧", ["とうこ"], ["陸弧"]],
+      [C2, "海溝にそって，大陸のふちにできる山脈を何というか。", "陸弧", ["りっこ"], ["島弧"]],
+      [C2, "海洋プレートにより運ばれてきて，大陸プレートに付け加わった物質を何というか。", "付加体", ["ふかたい"]],
+      [C2, "大陸プレートどうしが衝突しているようなプレート収束境界で，大陸が押し上げられるとどのような地形ができるか。", "大山脈", ["山脈", "だいさんみゃく", "だいさんみゃくけい"]],
+      [C2, "島弧や陸弧，大山脈の地質構造をつくる地殻変動を何というか。", "造山運動", ["ぞうざんうんどう"]],
+      [C2, "断層を境にして上側にある地盤がずり上がる断層を何というか。", "逆断層", ["ぎゃくだんそう"], ["正断層", "横ずれ断層"]],
+      [C2, "断層を境にして上側にある地盤がずり落ちる断層を何というか。", "正断層", ["せいだんそう"], ["逆断層", "横ずれ断層"]],
+      [C2, "断層を境にして水平方向にずれる断層を何というか。", "横ずれ断層", ["よこずれだんそう"], ["逆断層", "正断層"]],
+      [C2, "地殻に加わる力によって地層が折れ曲がった構造を何というか。", "褶曲", ["しゅうきょく", "しゅう曲"]],
+      [C2, "岩石が最初にできたときとは異なる温度や圧力に置かれ，鉱物どうしの化学反応が起きて新しい鉱物に変化する現象を何というか。", "変成作用", ["変成", "へんせいさよう"]],
+      [C2, "変成作用によって形成された岩石を何というか。", "変成岩", ["へんせいがん"], ["堆積岩", "火成岩"]],
+      [C2, "延長数百kmの広範囲にわたって，岩石が地下深部の温度と圧力にさらされることによって起きる変成作用を何というか。", "広域変成作用", ["広域変成", "こういきへんせいさよう"], ["接触変成作用"]],
+      [C2, "マグマの貫入により，その周囲の岩石が加熱されて起きる変成作用を何というか。", "接触変成作用", ["接触変成", "せっしょくへんせいさよう"], ["広域変成作用"]],
+      [C2, "ハワイ島のように，プレートの動きに関係せず，あまり位置を変えないマグマの供給源があるような場所を何というか。", "ホットスポット", ["ほっとすぽっと"]],
+      [C2, "プレートを動かす原動力は何か。", "重力", ["プレートの重さ", "じゅうりょく"], ["磁力", "地球の自転", "潮汐力"]],
+      [C2, "地球内部で温められた，低密度のマントルの上昇流を何とよぶか。", "プルーム", ["ホットプルーム", "マントルプルーム", "上昇プルーム", "ぷるーむ"], ["マントル対流"]],
+      [C2, "マントル内を循環する流れを何というか。", "マントル対流", ["まんとるたいりゅう"], ["プルーム"]],
+
+      // ===== 地震 =====
+      [C3, "地震による断層のずれは，断層面上のある1点から開始する。この開始点を何というか。", "震源", ["しんげん"], ["震央"]],
+      [C3, "震源の真上の地表の点を何というか。", "震央", ["しんおう"], ["震源"]],
+      [C3, "水平方向に岩盤を押す力が最も強くはたらき，水平方向に縮むように岩盤が動いて生じる断層は何か。", "逆断層", ["ぎゃくだんそう"], ["正断層", "右横ずれ断層", "左横ずれ断層"]],
+      [C3, "断層を境に両側の地盤が水平にずれた断層の図があり，【北側の地盤が西向き，南側の地盤が東向き】にずれている（北が上）。この断層は右横ずれ断層と左横ずれ断層のどちらであるか。", "左横ずれ断層", ["左横ずれ", "左ずれ断層", "ひだりよこずれだんそう"], ["右横ずれ断層"]],
+      [C3, "地震波が到達したとき，その地点でのゆれの強さを表したものを何というか。", "震度", ["しんど"], ["マグニチュード"]],
+      [C3, "日本で用いられている震度階級は，何段階に分けられているか。", "10段階", ["10", "１０段階", "十段階", "10階級", "じゅうだんかい"], ["7段階", "8段階", "9段階", "12段階"]],
+      [C3, "地震の規模を表すものさしを何というか。", "マグニチュード", ["M", "まぐにちゅーど"], ["震度"]],
+      [C3, "マグニチュード（M）が1大きくなると，地震のエネルギーは約何倍になるか。", "約32倍", ["32倍", "約32", "32", "やく32ばい"], ["約2倍", "約10倍", "約16倍", "約100倍", "約1000倍"]],
+      [C3, "地震は短期間で狭い場所に集中して発生することが多い。その一連の地震の中で最も大きい地震を何というか。", "本震", ["ほんしん"], ["余震", "前震"]],
+      [C3, "本震の後に起こった地震を何というか。", "余震", ["よしん"], ["本震", "前震"]],
+      [C3, "ある地震が起こったとき，その地震の余震が発生する領域を何というか。", "余震域", ["よしんいき"], ["異常震域"]],
+      [C3, "地震が起こったとき，初めに観測点に到達する波は，P波とS波のどちらか。", "P波", ["ピーは", "ぴーは", "p波"], ["S波"]],
+      [C3, "観測点にP波が到達してからS波が到達するまでの時間を何というか。", "初期微動継続時間", ["PS時間", "S-P時間", "しょきびどうけいぞくじかん"]],
+      [C3, "震源距離と初期微動継続時間の間には，どのような関係があるか。", "比例", ["比例関係", "正比例", "ひれい"], ["反比例", "2乗に比例"]],
+      [C3, "地震の震源を決定するには，初期微動継続時間が最低何地点で観測されていればよいか。", "3地点", ["3", "３地点", "3か所", "3ヶ所", "三地点", "さんちてん"], ["2地点", "4地点", "5地点"]],
+      [C3, "プレートの発散境界で発生する地震は，どのタイプの断層が多いか。", "正断層", ["せいだんそう"], ["逆断層", "横ずれ断層"]],
+      [C3, "東日本から東北，北海道は何プレートに属しているか。", "北米プレート", ["北アメリカプレート", "ほくべいぷれーと"], ["ユーラシアプレート", "太平洋プレート", "フィリピン海プレート"]],
+      [C3, "近畿地方や九州など西日本は何プレートに属しているか。", "ユーラシアプレート", ["ゆーらしあぷれーと"], ["北米プレート", "太平洋プレート", "フィリピン海プレート"]],
+      [C3, "日本海溝から東北地方の下に沈みこんでいる海洋プレートは何プレートか。", "太平洋プレート", ["たいへいようぷれーと"], ["北米プレート", "ユーラシアプレート", "フィリピン海プレート"]],
+      [C3, "沈みこむ海洋プレート内では，海溝から沈みこむ方向に向かって震源が徐々に深くなる。この地震が発生する場所を何というか。", "深発地震面", ["和達ベニオフ帯", "和達-ベニオフ帯", "しんぱつじしんめん"]],
+      [C3, "深発地震が発生すると，震央よりも沈みこむ海洋プレートに近い場所で大きなゆれが観測されることがある。このような領域を何というか。", "異常震域", ["いじょうしんいき"], ["余震域"]],
+      [C3, "最近数十万年間にくり返し活動し，将来も活動する可能性のある断層を何というか。", "活断層", ["かつだんそう"]],
+      [C3, "地震動によって未固結地盤の砂粒子が水中に浮遊する状態となり，液体のようにふるまう現象を何というか。", "液状化現象", ["液状化", "えきじょうかげんしょう"]],
+      [C3, "海底近くで発生する地震などで生じた海面の変動を何というか。", "津波", ["つなみ"], ["高潮", "副振動"]]
+    ];
+
+    const rawQuestions = data.map((d, i) => ({ id: i + 1, category: d[0], q: d[1], a: d[2], alt: d[3] || [], dis: d[4] || [] }));
+    const categories = [...new Set(rawQuestions.map(q => q.category))];
+
+    // State
+    let selectedCategory = 'ALL';
+    let currentMode = 'flashcard';
+    let userProgress = {};
+    let cardDeck = [], cardIndex = 0, isFlipped = false, filterReviewOnly = false;
+    let typingDeck = [], typingIndex = 0, typingScore = 0, typingAnswered = false, typingMistakes = [];
+    let quizDeck = [], quizIndex = 0, quizScore = 0, quizAnswered = false, quizMistakes = [];
+    let listAnswersVisible = false;
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function fmtQ(q) { return esc(q).replace(/【　?([①-㊿])　?】/g, '<span class="blank">$1</span>').replace(/【([^】]+)】/g, '<span class="text-indigo-600 font-black">【$1】</span>'); }
+    function shuffleArr(a) { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
+    function countOf(cat) { return cat === 'ALL' ? rawQuestions.length : rawQuestions.filter(q => q.category === cat).length; }
+
+    // Dropdown
+    function buildDropdown() {
+      const box = document.getElementById('category-options');
+      box.innerHTML = '';
+      const items = [{ cat: 'ALL', label: '全単元' }, ...categories.map(c => ({ cat: c, label: c }))];
+      items.forEach(it => {
+        const b = document.createElement('button');
+        b.dataset.cat = it.cat;
+        b.className = 'cat-option w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-bold transition hover:bg-indigo-50 hover:text-indigo-600 flex justify-between items-center gap-2';
+        b.innerHTML = `<span>${esc(it.label)}</span><span class="text-xs px-2 py-0.5 bg-slate-100 rounded-full whitespace-nowrap">${countOf(it.cat)}問</span>`;
+        b.onclick = () => selectCategory(it.cat);
+        box.appendChild(b);
+      });
+    }
+    function toggleDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('category-dropdown-menu');
+      const arrow = document.getElementById('dropdown-arrow');
+      const on = menu.classList.toggle('is-active');
+      arrow.classList.toggle('rotate-180', on);
+    }
+    function closeDropdown() {
+      document.getElementById('category-dropdown-menu').classList.remove('is-active');
+      document.getElementById('dropdown-arrow').classList.remove('rotate-180');
+    }
+    document.addEventListener('click', e => {
+      const c = document.getElementById('dropdown-container');
+      if (c && !c.contains(e.target)) closeDropdown();
+    });
+
+    function getFilteredQuestions() {
+      return selectedCategory === 'ALL' ? [...rawQuestions] : rawQuestions.filter(q => q.category === selectedCategory);
+    }
+
+    function selectCategory(cat) {
+      selectedCategory = cat;
+      closeDropdown();
+      const label = cat === 'ALL' ? '全単元' : cat;
+      document.getElementById('selected-category-label').innerHTML = `<i class="fa-solid fa-layer-group text-yellow-300"></i> ${esc(label)} (${countOf(cat)}問)`;
+      document.querySelectorAll('.cat-option').forEach(opt => {
+        const active = opt.dataset.cat === cat;
+        opt.classList.toggle('bg-indigo-50', active);
+        opt.classList.toggle('text-indigo-600', active);
+        opt.classList.toggle('text-slate-700', !active);
+      });
+      switchMode(currentMode);
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      ['flashcard', 'typing', 'quiz', 'test', 'list'].forEach(m => {
+        const tab = document.getElementById(`tab-${m}`);
+        const sec = document.getElementById(`mode-${m}`);
+        if (m === mode) {
+          tab.className = "flex-1 min-w-[90px] py-2.5 text-center border-b-2 border-white font-bold transition-all flex items-center justify-center gap-1.5 text-white";
+          sec.classList.remove('hidden');
+        } else {
+          tab.className = "flex-1 min-w-[90px] py-2.5 text-center border-b-2 border-transparent text-indigo-200 hover:text-white transition-all flex items-center justify-center gap-1.5";
+          sec.classList.add('hidden');
+        }
+      });
+      if (mode === 'flashcard') {
+        cardDeck = getFilteredQuestions();
+        if (filterReviewOnly) cardDeck = cardDeck.filter(q => userProgress[q.id] === 'review');
+        cardIndex = 0;
+        renderFlashcard();
+      } else if (mode === 'typing') startTypingTest(false);
+      else if (mode === 'quiz') startQuiz(false);
+      else if (mode === 'test') showTestStart();
+      else renderQuestionList();
+    }
+
+    function updateHeaderBadges() {
+      let m = 0, r = 0;
+      Object.values(userProgress).forEach(v => { if (v === 'mastered') m++; if (v === 'review') r++; });
+      document.getElementById('mastered-count-badge').innerHTML = `<i class="fa-solid fa-circle-check"></i> 習得: ${m}`;
+      document.getElementById('review-count-badge').innerHTML = `<i class="fa-solid fa-rotate-right"></i> 復習: ${r}`;
+    }
+
+    // Flashcard
+    let backUpdateTimer = null;
+    function renderCardBack(item) {
+      document.getElementById('card-answer').innerText = item ? item.a : "-";
+      const altBox = document.getElementById('card-alt-answers');
+      const si = document.getElementById('card-status-indicator');
+      if (!item) { altBox.classList.add('hidden'); si.innerHTML = ''; return; }
+      const alts = (item.alt || []).filter(x => !/^[ぁ-ん]+$/.test(x) && !/^[a-zA-Z0-9０-９]+$/.test(x) && x !== item.a);
+      if (alts.length) { altBox.classList.remove('hidden'); altBox.innerText = `（別解: ${alts.join(' / ')}）`; }
+      else altBox.classList.add('hidden');
+      const st = userProgress[item.id];
+      if (st === 'mastered') si.innerHTML = '<span class="bg-emerald-500/30 text-emerald-200 px-3 py-1 rounded-full border border-emerald-400/40"><i class="fa-solid fa-circle-check"></i> 習得済み</span>';
+      else if (st === 'review') si.innerHTML = '<span class="bg-amber-500/30 text-amber-200 px-3 py-1 rounded-full border border-amber-400/40"><i class="fa-solid fa-circle-exclamation"></i> 要復習</span>';
+      else si.innerHTML = '<span class="text-indigo-300">未学習</span>';
+    }
+
+    function renderFlashcard() {
+      const inner = document.getElementById('flashcard-inner');
+      inner.classList.remove('is-flipped');
+      isFlipped = false;
+      clearTimeout(backUpdateTimer);
+
+      const item = cardDeck.length ? cardDeck[cardIndex] : null;
+
+      // 切り替え後の0.6秒間は、裏面（答え）を黒塗りにして隠す
+      inner.classList.add('back-masked');
+      renderCardBack(item);
+      backUpdateTimer = setTimeout(() => inner.classList.remove('back-masked'), 600);
+
+      if (!item) {
+        document.getElementById('card-question').innerText = "該当する問題がありません";
+        document.getElementById('card-category-tag').innerText = "";
+        document.getElementById('card-progress-text').innerText = "0 / 0";
+        document.getElementById('card-progress-bar').style.width = "0%";
+        return;
+      }
+      document.getElementById('card-question').innerHTML = fmtQ(item.q);
+      document.getElementById('card-category-tag').innerText = item.category;
+      document.getElementById('card-progress-text').innerText = `問題 ${cardIndex + 1} / ${cardDeck.length}`;
+      document.getElementById('card-progress-bar').style.width = `${((cardIndex + 1) / cardDeck.length) * 100}%`;
+      updateHeaderBadges();
+    }
+    function flipCard() { isFlipped = !isFlipped; document.getElementById('flashcard-inner').classList.toggle('is-flipped', isFlipped); }
+    function nextCard() { if (!cardDeck.length) return; cardIndex = (cardIndex + 1) % cardDeck.length; renderFlashcard(); }
+    function prevCard() { if (!cardDeck.length) return; cardIndex = (cardIndex - 1 + cardDeck.length) % cardDeck.length; renderFlashcard(); }
+    function markCurrentCard(ok) {
+      if (!cardDeck.length) return;
+      userProgress[cardDeck[cardIndex].id] = ok ? 'mastered' : 'review';
+      updateHeaderBadges();
+      nextCard();
+    }
+    function shuffleCards() { cardDeck = shuffleArr(cardDeck); cardIndex = 0; renderFlashcard(); }
+    function toggleFilterReviewOnly() {
+      filterReviewOnly = !filterReviewOnly;
+      const btn = document.getElementById('btn-filter-review');
+      btn.className = filterReviewOnly
+        ? "px-3 py-1.5 text-xs rounded-xl border border-amber-500 bg-amber-50 text-amber-700 font-bold transition flex items-center gap-1"
+        : "px-3 py-1.5 text-xs rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 transition flex items-center gap-1";
+      cardDeck = getFilteredQuestions();
+      if (filterReviewOnly) cardDeck = cardDeck.filter(q => userProgress[q.id] === 'review');
+      cardIndex = 0;
+      renderFlashcard();
+    }
+
+    // Typing
+    function normalizeText(str) {
+      if (!str) return '';
+      return str.trim().toLowerCase()
+        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+        .replace(/[\s\u3000・･（）()\-_、，,。.\/／]+/g, '');
+    }
+    function startTypingTest(onlyMistakes = false) {
+      const base = (onlyMistakes && typingMistakes.length) ? typingMistakes : getFilteredQuestions();
+      typingDeck = shuffleArr(base);
+      typingIndex = 0; typingScore = 0; typingMistakes = [];
+      document.getElementById('typing-active-box').classList.remove('hidden');
+      document.getElementById('typing-result-box').classList.add('hidden');
+      renderTypingQuestion();
+    }
+    function renderTypingQuestion() {
+      if (!typingDeck.length) { document.getElementById('typing-question-text').innerText = "該当する問題がありません"; return; }
+      typingAnswered = false;
+      const item = typingDeck[typingIndex];
+      document.getElementById('typing-progress-text').innerText = `文字入力 ${typingIndex + 1} / ${typingDeck.length}`;
+      document.getElementById('typing-score-text').innerText = `正解数: ${typingScore}`;
+      document.getElementById('typing-progress-bar').style.width = `${((typingIndex + 1) / typingDeck.length) * 100}%`;
+      document.getElementById('typing-question-text').innerHTML = fmtQ(item.q);
+      document.getElementById('typing-category-tag').innerText = item.category;
+      const input = document.getElementById('typing-input');
+      input.value = ''; input.disabled = false;
+      input.className = "w-full px-5 py-4 text-base md:text-lg rounded-2xl border-2 border-slate-300 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition focus:outline-none font-bold text-slate-800";
+      setTimeout(() => input.focus(), 100);
+      document.getElementById('btn-typing-submit').classList.remove('hidden');
+      document.getElementById('btn-typing-next').classList.add('hidden');
+      document.getElementById('typing-feedback').className = "hidden rounded-2xl p-6 transition-all mb-6";
+    }
+    function handleTypingSubmit(e) {
+      if (e) e.preventDefault();
+      if (typingAnswered) { nextTypingQuestion(); return; }
+      const input = document.getElementById('typing-input');
+      const userVal = input.value;
+      if (!userVal.trim()) return;
+      typingAnswered = true; input.disabled = true;
+      const item = typingDeck[typingIndex];
+      const ok = [item.a, ...item.alt].map(normalizeText).includes(normalizeText(userVal));
+      const fb = document.getElementById('typing-feedback');
+      fb.classList.remove('hidden');
+      if (ok) {
+        typingScore++; userProgress[item.id] = 'mastered';
+        input.className = "w-full px-5 py-4 text-base md:text-lg rounded-2xl border-2 border-emerald-500 bg-emerald-50 font-bold text-emerald-900";
+        fb.className = "rounded-2xl p-6 bg-emerald-50 border-2 border-emerald-400 text-emerald-900 mb-6";
+        document.getElementById('typing-feedback-title').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> <span>正解！</span>';
+        document.getElementById('typing-feedback-detail').innerHTML = `正解: <span class="font-extrabold text-emerald-700">${esc(item.a)}</span>`;
+      } else {
+        typingMistakes.push(item); userProgress[item.id] = 'review';
+        input.className = "w-full px-5 py-4 text-base md:text-lg rounded-2xl border-2 border-rose-500 bg-rose-50 font-bold text-rose-900";
+        fb.className = "rounded-2xl p-6 bg-rose-50 border-2 border-rose-300 text-rose-900 mb-6";
+        document.getElementById('typing-feedback-title').innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-600"></i> <span>不正解...</span>';
+        document.getElementById('typing-feedback-detail').innerHTML = `あなたの解答: <span class="line-through text-rose-700 mr-3">${esc(userVal)}</span> 正解: <span class="font-extrabold text-slate-900 bg-amber-200 px-2 py-0.5 rounded">${esc(item.a)}</span>`;
+      }
+      document.getElementById('typing-score-text').innerText = `正解数: ${typingScore}`;
+      updateHeaderBadges();
+      document.getElementById('btn-typing-submit').classList.add('hidden');
+      document.getElementById('btn-typing-next').classList.remove('hidden');
+    }
+    function nextTypingQuestion() {
+      typingIndex++;
+      if (typingIndex < typingDeck.length) renderTypingQuestion();
+      else {
+        document.getElementById('typing-active-box').classList.add('hidden');
+        document.getElementById('typing-result-box').classList.remove('hidden');
+        document.getElementById('typing-final-score').innerText = `${typingScore} / ${typingDeck.length} 正解`;
+        document.getElementById('btn-typing-retry-mistakes').classList.toggle('hidden', typingMistakes.length === 0);
+      }
+    }
+
+    // Quiz (8 choices)
+    function startQuiz(onlyMistakes = false) {
+      const base = (onlyMistakes && quizMistakes.length) ? quizMistakes : getFilteredQuestions();
+      quizDeck = shuffleArr(base);
+      quizIndex = 0; quizScore = 0; quizMistakes = [];
+      document.getElementById('quiz-active-box').classList.remove('hidden');
+      document.getElementById('quiz-result-box').classList.add('hidden');
+      renderQuizQuestion();
+    }
+    function renderQuizQuestion() {
+      if (!quizDeck.length) { document.getElementById('quiz-question-text').innerText = "該当する問題がありません"; return; }
+      quizAnswered = false;
+      const item = quizDeck[quizIndex];
+      document.getElementById('quiz-progress-text').innerText = `8択テスト ${quizIndex + 1} / ${quizDeck.length}`;
+      document.getElementById('quiz-score-text').innerText = `正解数: ${quizScore}`;
+      document.getElementById('quiz-progress-bar').style.width = `${((quizIndex + 1) / quizDeck.length) * 100}%`;
+      document.getElementById('quiz-question-text').innerHTML = fmtQ(item.q);
+      document.getElementById('quiz-category-tag').innerText = item.category;
+
+      const correctSet = new Set([item.a, ...item.alt].map(normalizeText));
+      const notCorrect = a => !correctSet.has(normalizeText(a));
+      // 1) 問題ごとに指定したまぎらわしい選択肢 2) 同じ単元の答え 3) 他単元の答え の順で8択を作る
+      const custom = shuffleArr(item.dis.filter(notCorrect));
+      const allAnswers = [...new Set(rawQuestions.map(q => q.a))].filter(notCorrect);
+      const sameCat = shuffleArr([...new Set(rawQuestions.filter(q => q.category === item.category).map(q => q.a))].filter(notCorrect));
+      const rest = shuffleArr(allAnswers.filter(a => !sameCat.includes(a)));
+      const options = [item.a];
+      [...custom, ...sameCat, ...rest].forEach(a => {
+        if (options.length < 8 && !options.some(o => normalizeText(o) === normalizeText(a))) options.push(a);
+      });
+      const shuffled = shuffleArr(options);
+
+      const grid = document.getElementById('quiz-options-grid');
+      grid.innerHTML = '';
+      shuffled.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.dataset.opt = opt;
+        btn.className = "w-full text-left p-3.5 bg-white hover:bg-indigo-50 border border-slate-200 rounded-2xl font-bold text-slate-800 transition flex justify-between items-center shadow-sm text-sm md:text-base";
+        btn.innerHTML = `<span>${esc(opt)}</span> <i class="fa-regular fa-circle text-slate-300"></i>`;
+        btn.onclick = () => selectQuizOption(btn, opt, item.a);
+        grid.appendChild(btn);
+      });
+      document.getElementById('quiz-feedback').className = "hidden p-4 rounded-2xl mb-4 text-center font-bold transition";
+      document.getElementById('btn-quiz-next').classList.add('hidden');
+    }
+    function selectQuizOption(btn, sel, correct) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+      const fb = document.getElementById('quiz-feedback');
+      fb.classList.remove('hidden');
+      const item = quizDeck[quizIndex];
+      if (sel === correct) {
+        quizScore++; userProgress[item.id] = 'mastered';
+        btn.className = "w-full text-left p-3.5 bg-emerald-100 border-2 border-emerald-500 rounded-2xl font-bold text-emerald-900 flex justify-between items-center shadow-sm text-sm md:text-base";
+        btn.querySelector('i').className = "fa-solid fa-circle-check text-emerald-600 text-xl";
+        fb.className = "p-4 rounded-2xl mb-4 text-center font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+        fb.innerHTML = '<i class="fa-solid fa-circle-check"></i> 正解！';
+      } else {
+        quizMistakes.push(item); userProgress[item.id] = 'review';
+        btn.className = "w-full text-left p-3.5 bg-rose-100 border-2 border-rose-500 rounded-2xl font-bold text-rose-900 flex justify-between items-center shadow-sm text-sm md:text-base";
+        btn.querySelector('i').className = "fa-solid fa-circle-xmark text-rose-600 text-xl";
+        fb.className = "p-4 rounded-2xl mb-4 text-center font-bold bg-rose-100 text-rose-800 border border-rose-300";
+        fb.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 不正解... 正解は 「<span class="underline">${esc(correct)}</span>」 です`;
+        document.querySelectorAll('#quiz-options-grid button').forEach(b => {
+          if (b.dataset.opt === correct) {
+            b.className = "w-full text-left p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-2xl font-bold text-emerald-800 flex justify-between items-center text-sm md:text-base";
+            b.querySelector('i').className = "fa-solid fa-circle-check text-emerald-500 text-xl";
+          }
+        });
+      }
+      document.getElementById('quiz-score-text').innerText = `正解数: ${quizScore}`;
+      updateHeaderBadges();
+      document.getElementById('btn-quiz-next').classList.remove('hidden');
+    }
+    function nextQuizQuestion() {
+      quizIndex++;
+      if (quizIndex < quizDeck.length) renderQuizQuestion();
+      else {
+        document.getElementById('quiz-active-box').classList.add('hidden');
+        document.getElementById('quiz-result-box').classList.remove('hidden');
+        document.getElementById('quiz-final-score').innerText = `${quizScore} / ${quizDeck.length} 正解`;
+        document.getElementById('btn-quiz-retry-mistakes').classList.toggle('hidden', quizMistakes.length === 0);
+      }
+    }
+
+    // Test (覚えてるかテスト)
+    const TEST_COUNT = 15;
+    let testFormat = 'typing', testDeck = [], testIndex = 0, testResults = [], testAnswered = false;
+
+    function setTestFormat(f) {
+      testFormat = f;
+      const base = "flex-1 py-3 px-4 rounded-2xl border-2 font-bold text-sm transition flex items-center justify-center gap-2 ";
+      const on = base + "border-indigo-600 bg-indigo-50 text-indigo-700";
+      const off = base + "border-slate-200 bg-white text-slate-500 hover:bg-slate-50";
+      document.getElementById('test-fmt-typing').className = f === 'typing' ? on : off;
+      document.getElementById('test-fmt-choice').className = f === 'choice' ? on : off;
+    }
+    function showTestStart() {
+      const total = getFilteredQuestions().length;
+      const n = Math.min(TEST_COUNT, total);
+      const label = selectedCategory === 'ALL' ? '全単元' : selectedCategory;
+      document.getElementById('test-start-info').innerText = `出題範囲: ${label}（全${total}問からランダムに${n}問）`;
+      setTestFormat(testFormat);
+      const btn = document.getElementById('btn-test-start');
+      btn.disabled = total === 0;
+      btn.classList.toggle('opacity-50', total === 0);
+      document.getElementById('test-start-box').classList.remove('hidden');
+      document.getElementById('test-active-box').classList.add('hidden');
+      document.getElementById('test-result-box').classList.add('hidden');
+    }
+    function startTest(items) {
+      const pool = Array.isArray(items) ? items : shuffleArr(getFilteredQuestions()).slice(0, TEST_COUNT);
+      if (!pool.length) return;
+      testDeck = shuffleArr(pool);
+      testIndex = 0; testResults = [];
+      document.getElementById('test-start-box').classList.add('hidden');
+      document.getElementById('test-result-box').classList.add('hidden');
+      document.getElementById('test-active-box').classList.remove('hidden');
+      renderTestQuestion();
+      window.scrollTo({ top: 0 });
+    }
+    function buildChoices(item) {
+      const correctSet = new Set([item.a, ...item.alt].map(normalizeText));
+      const notCorrect = a => !correctSet.has(normalizeText(a));
+      const custom = shuffleArr(item.dis.filter(notCorrect));
+      const allAnswers = [...new Set(rawQuestions.map(q => q.a))].filter(notCorrect);
+      const sameCat = shuffleArr([...new Set(rawQuestions.filter(q => q.category === item.category).map(q => q.a))].filter(notCorrect));
+      const rest = shuffleArr(allAnswers.filter(a => !sameCat.includes(a)));
+      const options = [item.a];
+      [...custom, ...sameCat, ...rest].forEach(a => {
+        if (options.length < 8 && !options.some(o => normalizeText(o) === normalizeText(a))) options.push(a);
+      });
+      return shuffleArr(options);
+    }
+    function renderTestQuestion() {
+      testAnswered = false;
+      const item = testDeck[testIndex];
+      document.getElementById('test-progress-text').innerText = `テスト ${testIndex + 1} / ${testDeck.length}`;
+      document.getElementById('test-progress-bar').style.width = `${(testIndex / testDeck.length) * 100}%`;
+      document.getElementById('test-question-text').innerHTML = fmtQ(item.q);
+      document.getElementById('test-category-tag').innerText = item.category;
+      const typingArea = document.getElementById('test-typing-area');
+      const choiceArea = document.getElementById('test-choice-area');
+      if (testFormat === 'typing') {
+        typingArea.classList.remove('hidden');
+        choiceArea.classList.add('hidden');
+        const input = document.getElementById('test-input');
+        input.value = '';
+        setTimeout(() => input.focus(), 100);
+      } else {
+        typingArea.classList.add('hidden');
+        choiceArea.classList.remove('hidden');
+        const grid = document.getElementById('test-options-grid');
+        grid.innerHTML = '';
+        buildChoices(item).forEach(opt => {
+          const btn = document.createElement('button');
+          btn.className = "w-full text-left p-3.5 bg-white hover:bg-indigo-50 active:bg-indigo-100 border border-slate-200 rounded-2xl font-bold text-slate-800 transition shadow-sm text-sm md:text-base";
+          btn.innerText = opt;
+          btn.onclick = () => recordTestAnswer(opt, opt === item.a);
+          grid.appendChild(btn);
+        });
+      }
+    }
+    function handleTestSubmit(e) {
+      if (e) e.preventDefault();
+      const v = document.getElementById('test-input').value;
+      if (!v.trim()) return;
+      const item = testDeck[testIndex];
+      const ok = [item.a, ...item.alt].map(normalizeText).includes(normalizeText(v));
+      recordTestAnswer(v.trim(), ok);
+    }
+    function testDontKnow() { recordTestAnswer('', false); }
+    function recordTestAnswer(userVal, ok) {
+      if (testAnswered) return;
+      testAnswered = true;
+      const item = testDeck[testIndex];
+      testResults.push({ item, user: userVal, ok });
+      userProgress[item.id] = ok ? 'mastered' : 'review';
+      updateHeaderBadges();
+      testIndex++;
+      if (testIndex < testDeck.length) renderTestQuestion();
+      else finishTest();
+    }
+    function finishTest() {
+      const total = testResults.length;
+      const score = testResults.filter(r => r.ok).length;
+      const pct = Math.round((score / total) * 100);
+      document.getElementById('test-progress-bar').style.width = '100%';
+      document.getElementById('test-active-box').classList.add('hidden');
+      document.getElementById('test-result-box').classList.remove('hidden');
+      document.getElementById('test-final-score').innerText = `${score} / ${total} 正解`;
+      document.getElementById('test-final-percent').innerText = `正答率 ${pct}%`;
+      document.getElementById('test-final-message').innerText =
+        pct === 100 ? '🎉 全問正解！完璧です！' : pct >= 80 ? '👏 よく覚えています！あと一歩！' : pct >= 50 ? '💪 いい調子！間違えた問題を復習しよう' : '📚 まだ伸びしろあり！もう一度復習しよう';
+      document.getElementById('btn-test-retry-mistakes').classList.toggle('hidden', score === total);
+      const list = document.getElementById('test-review-list');
+      list.innerHTML = '';
+      testResults.forEach((r, i) => {
+        const div = document.createElement('div');
+        div.className = `p-4 rounded-2xl border-2 ${r.ok ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`;
+        const mark = r.ok
+          ? '<span class="text-emerald-700"><i class="fa-solid fa-circle-check"></i> 正解</span>'
+          : '<span class="text-rose-700"><i class="fa-solid fa-circle-xmark"></i> 不正解</span>';
+        const yours = r.ok ? '' : `<div class="text-sm font-medium text-rose-800 mt-1">あなたの解答: <span class="font-bold line-through">${r.user ? esc(r.user) : '（未回答）'}</span></div>`;
+        div.innerHTML = `
+          <div class="flex justify-between items-center text-xs font-bold mb-1.5">
+            <span class="text-slate-500">${i + 1}. [${esc(r.item.category)}]</span>${mark}
+          </div>
+          <div class="font-bold text-slate-800 mb-2">${fmtQ(r.item.q)}</div>
+          <div class="text-sm font-medium text-slate-700">正解: <span class="font-extrabold text-slate-900 bg-amber-200 px-2 py-0.5 rounded">${esc(r.item.a)}</span></div>${yours}`;
+        list.appendChild(div);
+      });
+      window.scrollTo({ top: 0 });
+    }
+    function retryTestMistakes() {
+      const wrong = testResults.filter(r => !r.ok).map(r => r.item);
+      if (wrong.length) startTest(wrong);
+    }
+
+    // List
+    function renderQuestionList() {
+      const container = document.getElementById('question-list-container');
+      const s = document.getElementById('list-search-input').value.toLowerCase();
+      container.innerHTML = '';
+      const filtered = getFilteredQuestions().filter(it =>
+        it.q.toLowerCase().includes(s) || it.a.toLowerCase().includes(s) || it.category.toLowerCase().includes(s));
+      if (!filtered.length) { container.innerHTML = '<div class="text-center py-8 text-slate-400 font-medium">該当する問題が見つかりません</div>'; return; }
+      filtered.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = "bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+        const mastered = userProgress[item.id] === 'mastered';
+        div.innerHTML = `
+          <div class="flex-1">
+            <div class="text-xs font-bold text-indigo-600 mb-1">[${esc(item.category)}] 問題 ${index + 1}</div>
+            <div class="text-slate-800 font-bold mb-2">${fmtQ(item.q)}</div>
+            <div class="answer-text ${listAnswersVisible ? '' : 'hidden'} text-amber-800 font-bold bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 inline-block text-sm">解答: ${esc(item.a)}</div>
+          </div>
+          <div class="flex items-center gap-2 self-end sm:self-center">
+            <button onclick="toggleSingleListAnswer(this)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">答え表示</button>
+            <button onclick="toggleListMastery(${item.id})" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${mastered ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}">
+              <i class="fa-solid fa-check"></i> ${mastered ? '習得済み' : '未習得'}
+            </button>
+          </div>`;
+        container.appendChild(div);
+      });
+    }
+    function toggleSingleListAnswer(btn) {
+      btn.closest('.bg-white').querySelector('.answer-text').classList.toggle('hidden');
+    }
+    function toggleAllAnswersInList() { listAnswersVisible = !listAnswersVisible; renderQuestionList(); }
+    function toggleListMastery(id) {
+      userProgress[id] = userProgress[id] === 'mastered' ? 'review' : 'mastered';
+      updateHeaderBadges(); renderQuestionList();
+    }
+
+    document.addEventListener('keydown', e => {
+      if (currentMode === 'flashcard') {
+        if (e.code === 'Space') { e.preventDefault(); flipCard(); }
+        else if (e.code === 'ArrowRight') nextCard();
+        else if (e.code === 'ArrowLeft') prevCard();
+      } else if (currentMode === 'typing') {
+        if (e.key === 'Enter' && typingAnswered) { e.preventDefault(); nextTypingQuestion(); }
+      }
+    });
+
+    window.onload = function () {
+      buildDropdown();
+      selectCategory('ALL');
+    };
+  </script>
+</body>
+</html>
